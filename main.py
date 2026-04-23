@@ -36,9 +36,10 @@ blaze = Agent(
 @app.get("/")
 def root():
     return {
-        "status": "My AI Butler CrewAI is running",
-        "message": "Alfred (formal) and Blaze (spicy mode) are ready with shared memory",
-        "content_creation": "Enabled - YouTube, Instagram, Facebook supported"
+        "status": "✅ My AI Butler CrewAI is running",
+        "alfred": "Ready (formal butler)",
+        "blaze": "Ready (spicy mode - shared memory)",
+        "content_creation": "Enabled - YouTube, Instagram, Facebook"
     }
 
 print("✅ Alfred and Blaze initialized with shared memory")
