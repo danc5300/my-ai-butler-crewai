@@ -1,0 +1,6 @@
+crewai
+crewai-tools
+langchain-openrouter
+langchain-community
+duckduckgo-search
+beautifulsoup4
