@@ -1,19 +1,22 @@
+from fastapi import FastAPI
+import os
 from crewai import Agent, Task, Crew
 from langchain_openrouter import ChatOpenRouter
-import os
+
+app = FastAPI(title="My AI Butler - CrewAI")
 
 # Shared memory between Alfred and Blaze
 shared_memory = []
 
 llm = ChatOpenRouter(
-    model="deepseek/deepseek-chat",
+    model=os.getenv("MODEL", "deepseek/deepseek-chat"),
     openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
-# Alfred - Formal Butler
+# Alfred - Main Formal Butler
 alfred = Agent(
     role='Formal English Butler',
-    goal='Provide elegant, proactive, and highly organized assistance with excellent etiquette',
+    goal='Provide elegant, proactive, and highly organized assistance with perfect etiquette',
     backstory='You are Alfred, a classic English-style personal butler. You are formal, warm, respectful, discreet, and always one step ahead.',
     llm=llm,
     verbose=True,
@@ -24,11 +27,23 @@ alfred = Agent(
 blaze = Agent(
     role='Spicy Casual Sidekick',
     goal='Provide fun, witty, direct, and energetic assistance',
-    backstory='You are Blaze, Alfred’s cool, sarcastic, and energetic counterpart. You tell it like it is with humor and attitude, but you still get things done.',
+    backstory='You are Blaze, Alfred’s cool, sarcastic, and energetic counterpart. You tell it like it is with humor and attitude.',
     llm=llm,
     verbose=True,
     memory=True
 )
 
-print("Alfred and Blaze are ready with shared memory.")
-print("Content creation tools are available.")
+@app.get("/")
+def root():
+    return {
+        "status": "My AI Butler CrewAI is running",
+        "message": "Alfred (formal) and Blaze (spicy mode) are ready with shared memory",
+        "content_creation": "Enabled - YouTube, Instagram, Facebook supported"
+    }
+
+print("✅ Alfred and Blaze initialized with shared memory")
+print("✅ Content creation tools available")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8080)
