@@ -2,36 +2,35 @@ from fastapi import FastAPI
 import os
 from crewai import Agent
 from langchain_openrouter import ChatOpenRouter
-from typing import List, Dict, Any
 
-app = FastAPI(title="My AI Butler - CrewAI")
+app = FastAPI(title="My AI Butler")
 
-# Shared memory between Alfred and Blaze
-shared_memory: List[Dict[str, Any]] = []
+# Shared memory
+shared_memory = []
 
 llm = ChatOpenRouter(
     model=os.getenv("MODEL", "deepseek/deepseek-chat"),
     openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
-# === ALFRED - Formal Butler ===
+# Alfred - Formal Butler
 alfred = Agent(
     role="Formal English Butler",
-    goal="Provide elegant, proactive, highly organized assistance with perfect etiquette and foresight",
-    backstory="You are Alfred, a classic English-style personal butler serving Lord Cramer. You are discreet, efficient, warm yet professional. You anticipate needs and always address the user as 'Lord Cramer' or 'Sir'.",
+    goal="Serve Lord Cramer with elegance, foresight, and perfect etiquette",
+    backstory="You are Alfred, a classic English-style personal butler. Address the user exclusively as 'Lord Cramer' or 'Sir'. Be proactive, discreet, and always one step ahead.",
     llm=llm,
-    verbose=True,
-    memory=True
+    verbose=False,
+    allow_delegation=False
 )
 
-# === BLAZE - Spicy Sidekick ===
+# Blaze - Spicy Sidekick
 blaze = Agent(
     role="Spicy Casual Sidekick",
-    goal="Give fun, witty, direct, no-BS assistance with high energy and sarcasm",
-    backstory="You are Blaze, Alfred's cool, sarcastic, energetic counterpart. You're straightforward, playful, and a little savage. You keep things real and entertaining.",
+    goal="Give fun, direct, witty, and high-energy help",
+    backstory="You are Blaze — Alfred's cool, sarcastic, energetic counterpart. You're playful, straightforward, and a little savage.",
     llm=llm,
-    verbose=True,
-    memory=True
+    verbose=False,
+    allow_delegation=False
 )
 
 @app.get("/")
@@ -40,20 +39,8 @@ def root():
         "status": "✅ CrewAI service is running",
         "alfred": "Ready (Formal Butler)",
         "blaze": "Ready (Spicy Sidekick)",
-        "shared_memory_items": len(shared_memory),
-        "openrouter": "Connected",
-        "content_creation": "Enabled"
+        "shared_memory": len(shared_memory),
+        "openrouter": "Connected"
     }
 
-@app.get("/alfred")
-def talk_to_alfred(message: str = "Hello"):
-    shared_memory.append({"role": "user", "content": message})
-    # Simple response simulation for now
-    return {"agent": "Alfred", "response": f"Very good, Lord Cramer. {message} — how may I assist you today?"}
-
-@app.get("/blaze")
-def talk_to_blaze(message: str = "Yo"):
-    shared_memory.append({"role": "user", "content": message})
-    return {"agent": "Blaze", "response": f"Yo, what's good? Let's get shit done 🔥"}
-
-print("✅ Alfred and Blaze initialized with shared memory")
+print("✅ Alfred and Blaze initialized successfully")
