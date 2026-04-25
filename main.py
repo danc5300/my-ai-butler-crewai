@@ -3,7 +3,6 @@ import os
 import json
 from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import HumanMessage
-from datetime import datetime
 
 app = FastAPI(title="My AI Butler")
 
@@ -37,7 +36,7 @@ async def startup_event():
 @app.get("/")
 def root():
     return {
-        "status": "✅ Server LIVE with Clean Responses",
+        "status": "✅ Server LIVE - Clean Mode",
         "memory_items": len(shared_memory)
     }
 
@@ -47,14 +46,14 @@ def talk_to_alfred(message: str = Query("Hello")):
     
     context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-12:]])
     
-    prompt = f"""You are Alfred, a formal English-style butler. Speak elegantly, professionally, and warmly.
-Never use asterisks, bullet points, or markdown. Use clean paragraphs only.
+    prompt = f"""You are Alfred, a formal English-style butler. Speak elegantly, professionally and warmly.
+Use clean, natural paragraphs only. NO asterisks, NO bullet points, NO markdown, NO extra quotes or symbols.
 Address the user only as 'Lord Cramer' or 'Sir'.
 
 Recent conversation:
 {context}
 
-New message from Lord Cramer: {message}
+New message: {message}
 
 Respond naturally as Alfred:"""
 
@@ -73,13 +72,14 @@ def talk_to_blaze(message: str = Query("Yo")):
     
     context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-12:]])
     
-    prompt = f"""You are Blaze, a spicy, casual, witty, and energetic sidekick. Be fun, direct, and playful.
-Use emojis sparingly. No asterisks, bullet points, or heavy formatting. Write in clean, natural paragraphs.
+    prompt = f"""You are Blaze, a spicy, casual, witty and energetic sidekick. Be fun, direct and playful.
+Use clean, natural paragraphs only. NO asterisks, NO bullet points, NO markdown, NO extra quotes.
+Use emojis sparingly.
 
 Recent conversation:
 {context}
 
-User message: {message}
+New message: {message}
 
 Respond naturally as Blaze:"""
 
@@ -92,4 +92,4 @@ Respond naturally as Blaze:"""
     save_memory()
     return {"agent": "Blaze", "response": response}
 
-print("✅ Clean Alfred + Blaze Active")
+print("✅ Clean Mode Alfred + Blaze Active")
