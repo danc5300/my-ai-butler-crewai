@@ -1,67 +1,43 @@
-from fastapi import FastAPI, Query
-import os
-import json
 import discord
-from discord.ext import commands
+import os
 from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import HumanMessage
-import asyncio
 
-app = FastAPI(title="My AI Butler")
+intents = discord.Intents.default()
+intents.message_content = True
 
-# ====================== LLM ======================
+bot = discord.Client(intents=intents)
+
 llm = ChatOpenRouter(
     model=os.getenv("MODEL", "deepseek/deepseek-chat"),
     openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
-# ====================== Discord Bot ======================
-intents = discord.Intents.default()
-intents.message_content = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
 @bot.event
 async def on_ready():
-    print(f"✅ {bot.user} is online and ready!")
+    print(f"✅ {bot.user} is now ONLINE!")
 
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
 
-    if message.content.startswith("@Alfred") or "alfred" in message.content.lower():
-        response = await get_alfred_response(message.content)
-        await message.reply(response)
+    content = message.content.lower()
 
-    elif message.content.startswith("@Blaze") or "blaze" in message.content.lower():
-        response = await get_blaze_response(message.content)
-        await message.reply(response)
+    if "@alfred" in content or "alfred" in content:
+        try:
+            prompt = f"You are Alfred, formal English butler. Speak cleanly and professionally. Address as 'Lord Cramer' or 'Sir'.\nUser: {message.content}\nAlfred:"
+            response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
+            await message.reply(response)
+        except:
+            await message.reply("Very good, Lord Cramer. How may I assist you today, sir?")
 
-async def get_alfred_response(user_message):
-    try:
-        prompt = f"You are Alfred, formal English butler. Speak cleanly and professionally. Address as 'Lord Cramer' or 'Sir'.\nUser: {user_message}\nAlfred:"
-        response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
-        return response
-    except:
-        return "Very good, Lord Cramer. How may I assist you today, sir?"
+    elif "@blaze" in content or "blaze" in content:
+        try:
+            prompt = f"You are Blaze, spicy and fun. Be casual and energetic.\nUser: {message.content}\nBlaze:"
+            response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
+            await message.reply(response)
+        except:
+            await message.reply("Yo what's good? 🔥 Let's get this shit done.")
 
-async def get_blaze_response(user_message):
-    try:
-        prompt = f"You are Blaze, spicy and fun. Speak casually with energy.\nUser: {user_message}\nBlaze:"
-        response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
-        return response
-    except:
-        return "Yo what's good? 🔥 Let's get this shit done."
-
-# ====================== FastAPI ======================
-@app.get("/")
-def root():
-    return {"status": "✅ My AI Butler is running with Discord"}
-
-# Start Discord bot in background
-@app.on_event("startup")
-async def startup():
-    asyncio.create_task(bot.start(os.getenv("DISCORD_BOT_TOKEN")))
-
-print("✅ Server starting with Discord bot")
+bot.run(os.getenv("DISCORD_BOT_TOKEN"))
