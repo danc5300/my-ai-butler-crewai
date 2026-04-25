@@ -32,65 +32,64 @@ async def startup_event():
         model=os.getenv("MODEL", "deepseek/deepseek-chat"),
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
     )
-    print("✅ OpenRouter connected | Memory loaded:", len(shared_memory))
+    print("✅ OpenRouter connected")
 
 @app.get("/")
 def root():
     return {
-        "status": "✅ My AI Butler LIVE",
-        "alfred": "Ready (Formal Butler)",
-        "blaze": "Ready (Spicy Sidekick)",
+        "status": "✅ Server LIVE with Clean Responses",
         "memory_items": len(shared_memory)
     }
 
 @app.get("/alfred")
 def talk_to_alfred(message: str = Query("Hello")):
-    shared_memory.append({"role": "user", "agent": "alfred", "content": message, "time": str(datetime.now())})
+    shared_memory.append({"role": "user", "agent": "alfred", "content": message})
     
-    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-15:]])
+    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-12:]])
     
-    prompt = f"""You are Alfred, a highly professional English-style butler serving Lord Cramer.
-You are elegant, discreet, proactive, and always one step ahead. Use formal but warm language.
-Never break character. Address him only as 'Lord Cramer' or 'Sir'.
+    prompt = f"""You are Alfred, a formal English-style butler. Speak elegantly, professionally, and warmly.
+Never use asterisks, bullet points, or markdown. Use clean paragraphs only.
+Address the user only as 'Lord Cramer' or 'Sir'.
 
 Recent conversation:
 {context}
 
-Lord Cramer's new message: {message}
+New message from Lord Cramer: {message}
 
-Respond as Alfred:"""
+Respond naturally as Alfred:"""
 
     try:
         response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
     except:
         response = f"Very good, Lord Cramer. How may I assist you today, sir?"
 
-    shared_memory.append({"role": "assistant", "agent": "alfred", "content": response, "time": str(datetime.now())})
+    shared_memory.append({"role": "assistant", "agent": "alfred", "content": response})
     save_memory()
     return {"agent": "Alfred", "response": response}
 
 @app.get("/blaze")
 def talk_to_blaze(message: str = Query("Yo")):
-    shared_memory.append({"role": "user", "agent": "blaze", "content": message, "time": str(datetime.now())})
+    shared_memory.append({"role": "user", "agent": "blaze", "content": message})
     
-    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-15:]])
+    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-12:]])
     
-    prompt = f"""You are Blaze, a spicy, sarcastic, witty, high-energy sidekick. You are fun, direct, playful, and a little savage. Use emojis and casual slang.
+    prompt = f"""You are Blaze, a spicy, casual, witty, and energetic sidekick. Be fun, direct, and playful.
+Use emojis sparingly. No asterisks, bullet points, or heavy formatting. Write in clean, natural paragraphs.
 
 Recent conversation:
 {context}
 
 User message: {message}
 
-Respond as Blaze:"""
+Respond naturally as Blaze:"""
 
     try:
         response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
     except:
         response = f"Yo what's good? 🔥 {message} Let's get this shit done."
 
-    shared_memory.append({"role": "assistant", "agent": "blaze", "content": response, "time": str(datetime.now())})
+    shared_memory.append({"role": "assistant", "agent": "blaze", "content": response})
     save_memory()
     return {"agent": "Blaze", "response": response}
 
-print("✅ Upgraded Alfred + Blaze Active")
+print("✅ Clean Alfred + Blaze Active")
