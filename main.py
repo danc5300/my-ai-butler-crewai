@@ -3,13 +3,13 @@ import os
 import json
 from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import HumanMessage
+from datetime import datetime
 
 app = FastAPI(title="My AI Butler")
 
 llm = None
 MEMORY_FILE = "shared_memory.json"
 
-# Load memory from file at startup
 def load_memory():
     if os.path.exists(MEMORY_FILE):
         try:
@@ -21,6 +21,10 @@ def load_memory():
 
 shared_memory = load_memory()
 
+def save_memory():
+    with open(MEMORY_FILE, "w") as f:
+        json.dump(shared_memory, f)
+
 @app.on_event("startup")
 async def startup_event():
     global llm
@@ -28,68 +32,65 @@ async def startup_event():
         model=os.getenv("MODEL", "deepseek/deepseek-chat"),
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
     )
-    print(f"✅ OpenRouter connected | Memory loaded: {len(shared_memory)} items")
-
-def save_memory():
-    with open(MEMORY_FILE, "w") as f:
-        json.dump(shared_memory, f)
+    print("✅ OpenRouter connected | Memory loaded:", len(shared_memory))
 
 @app.get("/")
 def root():
     return {
-        "status": "✅ Server LIVE with Persistent Memory",
-        "alfred": "Ready",
-        "blaze": "Ready",
+        "status": "✅ My AI Butler LIVE",
+        "alfred": "Ready (Formal Butler)",
+        "blaze": "Ready (Spicy Sidekick)",
         "memory_items": len(shared_memory)
     }
 
 @app.get("/alfred")
 def talk_to_alfred(message: str = Query("Hello")):
-    shared_memory.append({"role": "user", "agent": "alfred", "content": message})
+    shared_memory.append({"role": "user", "agent": "alfred", "content": message, "time": str(datetime.now())})
     
-    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-20:]])
+    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-15:]])
     
-    prompt = f"""You are Alfred, formal English-style butler to Lord Cramer.
-Speak elegantly and professionally. Address him only as 'Lord Cramer' or 'Sir'.
+    prompt = f"""You are Alfred, a highly professional English-style butler serving Lord Cramer.
+You are elegant, discreet, proactive, and always one step ahead. Use formal but warm language.
+Never break character. Address him only as 'Lord Cramer' or 'Sir'.
 
 Recent conversation:
 {context}
 
-New message: {message}
+Lord Cramer's new message: {message}
 
-Alfred:"""
-    
+Respond as Alfred:"""
+
     try:
         response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
     except:
         response = f"Very good, Lord Cramer. How may I assist you today, sir?"
-    
-    shared_memory.append({"role": "assistant", "agent": "alfred", "content": response})
+
+    shared_memory.append({"role": "assistant", "agent": "alfred", "content": response, "time": str(datetime.now())})
     save_memory()
     return {"agent": "Alfred", "response": response}
 
 @app.get("/blaze")
 def talk_to_blaze(message: str = Query("Yo")):
-    shared_memory.append({"role": "user", "agent": "blaze", "content": message})
+    shared_memory.append({"role": "user", "agent": "blaze", "content": message, "time": str(datetime.now())})
     
-    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-20:]])
+    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-15:]])
     
-    prompt = f"""You are Blaze, spicy, casual, witty sidekick. Be fun, direct, sarcastic, high-energy. Use emojis.
+    prompt = f"""You are Blaze, a spicy, sarcastic, witty, high-energy sidekick. You are fun, direct, playful, and a little savage. Use emojis and casual slang.
 
 Recent conversation:
 {context}
 
-New message: {message}
+User message: {message}
 
-Blaze:"""
-    
+Respond as Blaze:"""
+
     try:
         response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
     except:
         response = f"Yo what's good? 🔥 {message} Let's get this shit done."
-    
-    shared_memory.append({"role": "assistant", "agent": "blaze", "content": response})
+
+    shared_memory.append({"role": "assistant", "agent": "blaze", "content": response, "time": str(datetime.now())})
     save_memory()
     return {"agent": "Blaze", "response": response}
 
-print("✅ Persistent Shared Memory Active")
+print("✅ Upgraded Alfred + Blaze Active")
