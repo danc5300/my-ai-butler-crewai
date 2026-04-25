@@ -1,8 +1,4 @@
-crewai
-crewai-tools
-langchain-openrouter
-langchain-community
 fastapi
 uvicorn
-duckduckgo-search
-beautifulsoup4
+langchain-openrouter
+discord.py
