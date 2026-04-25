@@ -31,36 +31,31 @@ async def startup_event():
         model=os.getenv("MODEL", "deepseek/deepseek-chat"),
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
     )
-    print("✅ OpenRouter connected")
 
 @app.get("/")
 def root():
-    return {
-        "status": "✅ Server LIVE - Clean Mode",
-        "memory_items": len(shared_memory)
-    }
+    return {"status": "✅ Clean Mode Active"}
 
 @app.get("/alfred")
 def talk_to_alfred(message: str = Query("Hello")):
     shared_memory.append({"role": "user", "agent": "alfred", "content": message})
     
-    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-12:]])
+    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-10:]])
     
-    prompt = f"""You are Alfred, a formal English-style butler. Speak elegantly, professionally and warmly.
-Use clean, natural paragraphs only. NO asterisks, NO bullet points, NO markdown, NO extra quotes or symbols.
-Address the user only as 'Lord Cramer' or 'Sir'.
+    prompt = f"""You are Alfred, a formal English-style butler. Speak in clean, natural paragraphs only. 
+Never use newlines, asterisks, bullet points, quotes, or markdown. 
+Address the user only as 'Lord Cramer' or 'Sir'. Keep responses warm and professional.
 
-Recent conversation:
-{context}
+Recent context: {context}
 
-New message: {message}
+User: {message}
 
-Respond naturally as Alfred:"""
+Alfred:"""
 
     try:
         response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
     except:
-        response = f"Very good, Lord Cramer. How may I assist you today, sir?"
+        response = "Very good, Lord Cramer. How may I assist you today, sir?"
 
     shared_memory.append({"role": "assistant", "agent": "alfred", "content": response})
     save_memory()
@@ -70,18 +65,17 @@ Respond naturally as Alfred:"""
 def talk_to_blaze(message: str = Query("Yo")):
     shared_memory.append({"role": "user", "agent": "blaze", "content": message})
     
-    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-12:]])
+    context = "\n".join([f"{item['agent'].capitalize()}: {item['content']}" for item in shared_memory[-10:]])
     
-    prompt = f"""You are Blaze, a spicy, casual, witty and energetic sidekick. Be fun, direct and playful.
-Use clean, natural paragraphs only. NO asterisks, NO bullet points, NO markdown, NO extra quotes.
-Use emojis sparingly.
+    prompt = f"""You are Blaze, a spicy, casual, witty sidekick. Speak in clean, natural paragraphs only. 
+Never use newlines, asterisks, bullet points, or heavy markdown. 
+Be fun, direct, and use emojis sparingly.
 
-Recent conversation:
-{context}
+Recent context: {context}
 
-New message: {message}
+User: {message}
 
-Respond naturally as Blaze:"""
+Blaze:"""
 
     try:
         response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
@@ -91,5 +85,3 @@ Respond naturally as Blaze:"""
     shared_memory.append({"role": "assistant", "agent": "blaze", "content": response})
     save_memory()
     return {"agent": "Blaze", "response": response}
-
-print("✅ Clean Mode Alfred + Blaze Active")
