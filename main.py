@@ -20,26 +20,26 @@ llm = ChatOpenRouter(
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
-# ====================== HEALTH CHECK ======================
+print("🚀 Alfred & Blaze Telegram Bot Starting...")
+
+# ====================== COMMANDS ======================
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, "✅ Alfred & Blaze are online!\n\nMention 'Alfred' for formal help, or just chat normally for Blaze.")
-
-@app.get("/")  # For Render health check
-async def health():
-    return {"status": "running", "bot": "Alfred & Blaze"}
+    bot.reply_to(message, "✅ **Alfred & Blaze are online!**\n\n"
+                         "• Say 'Alfred' for formal butler mode\n"
+                         "• Just chat normally for Blaze (casual & fun)")
 
 # ====================== MAIN HANDLER ======================
 @bot.message_handler(func=lambda message: True)
-def handle_all_messages(message):
+def handle_message(message):
     try:
         text = message.text.strip()
         user_name = message.from_user.first_name or "User"
 
-        if any(x in text.lower() for x in ["alfred", "butler", "lord cramer", "formal"]):
-            system = f"You are Alfred, a proper English butler. Address the user as 'Lord {user_name}' or 'Lord Cramer'. Be formal and helpful."
+        if any(word in text.lower() for word in ["alfred", "butler", "lord cramer", "formal", "sir"]):
+            system = f"You are Alfred, a very proper English butler. Always address the user as 'Lord {user_name}' or 'Lord Cramer'. Be respectful, elegant and helpful."
         else:
-            system = f"You are Blaze, a cool, casual, slightly spicy assistant. Be fun and energetic with {user_name}."
+            system = f"You are Blaze, a cool, laid-back, slightly spicy and fun assistant. Use casual language, slang, and be energetic with {user_name}."
 
         response = llm.invoke([
             HumanMessage(content=f"{system}\n\nUser: {text}")
@@ -49,12 +49,9 @@ def handle_all_messages(message):
 
     except Exception as e:
         print(f"Error: {e}")
-        bot.reply_to(message, "Sorry, I'm having a moment. Try again!")
+        bot.reply_to(message, "Sorry Lord Cramer, I'm having a small technical issue. Please try again.")
 
-# ====================== START BOT ======================
+# ====================== START ======================
 if __name__ == "__main__":
-    print("🚀 Starting Alfred & Blaze Telegram Bot...")
-    print("✅ Bot is ready. Send /start to test.")
-    
-    # Run with longer timeout to reduce conflicts
+    print("✅ Bot is now running and listening...")
     bot.infinity_polling(timeout=60, long_polling_timeout=60)
