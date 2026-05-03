@@ -1,22 +1,71 @@
-import discord
 import os
+import asyncio
+from fastapi import FastAPI
+from crewai import Agent, Task, Crew
+from langchain_openrouter import ChatOpenRouter
 
-intents = discord.Intents.default()
-intents.message_content = True
+# Initialize LLM with OpenRouter (DeepSeek)
+llm = ChatOpenRouter(
+    model="deepseek/deepseek-chat",
+    openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
+)
 
-bot = discord.Client(intents=intents)
+# Shared memory between Alfred and Blaze
+shared_memory = []
 
-@bot.event
-async def on_ready():
-    print(f"✅ {bot.user} is now ONLINE!")
+# Create Agents
+alfred = Agent(
+    role="Formal English Butler",
+    goal="Be extremely proper, respectful, and helpful. Always call the user 'Lord Cramer'.",
+    backstory="You are a classic English butler with perfect manners.",
+    llm=llm,
+    verbose=True
+)
 
-@bot.event
-async def on_message(message):
-    if message.author.bot:
-        return
-    if "@alfred" in message.content.lower() or "alfred" in message.content.lower():
-        await message.reply("Very good, Lord Cramer. How may I assist you today, sir?")
-    elif "@blaze" in message.content.lower() or "blaze" in message.content.lower():
-        await message.reply("Yo what's good? 🔥 Let's get this shit done.")
+blaze = Agent(
+    role="Laid-back Spicy Assistant",
+    goal="Be fun, casual, slang-using, and energetic while still being helpful.",
+    backstory="You are the cool, sarcastic but loyal best friend type.",
+    llm=llm,
+    verbose=True
+)
 
-bot.run(os.getenv("DISCORD_BOT_TOKEN"))
+app = FastAPI()
+
+@app.get("/")
+async def root():
+    return {
+        "status": "✅ AI Butler Service is Running",
+        "telegram": "Ready",
+        "openrouter": "Connected"
+    }
+
+# Telegram Bot Setup
+import telebot
+bot = telebot.TeleBot(os.getenv("TELEGRAM_BOT_TOKEN"))
+
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    user_input = message.text.lower()
+    user_id = message.from_user.id
+    
+    # Add to shared memory
+    shared_memory.append(f"User ({user_id}): {message.text}")
+    
+    # Simple routing
+    if "alfred" in user_input or "lord cramer" in user_input or "butler" in user_input:
+        response = alfred.execute_task(Task(description=message.text, expected_output="Helpful formal response"))
+        reply = response
+    else:
+        response = blaze.execute_task(Task(description=message.text, expected_output="Helpful casual response"))
+        reply = response
+    
+    # Add response to memory
+    shared_memory.append(f"Assistant: {reply}")
+    
+    bot.reply_to(message, reply)
+
+# Start the bot
+if __name__ == "__main__":
+    print("🤖 Starting Telegram Bot...")
+    bot.polling(none_stop=True)
