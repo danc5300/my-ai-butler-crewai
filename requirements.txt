@@ -1,4 +1,7 @@
 fastapi
 uvicorn
 langchain-openrouter
-discord.py
+telebot
+crewai
+crewai-tools
+pydantic
