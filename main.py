@@ -1,34 +1,60 @@
 import os
 import telebot
+import time
 from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import HumanMessage
+
+# ====================== CONFIG ======================
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
+
+if not TELEGRAM_TOKEN or not OPENROUTER_KEY:
+    print("❌ Missing environment variables!")
+    exit(1)
 
 # Initialize LLM
 llm = ChatOpenRouter(
     model="deepseek/deepseek-chat",
-    openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
+    openrouter_api_key=OPENROUTER_KEY
 )
 
-bot = telebot.TeleBot(os.getenv("TELEGRAM_BOT_TOKEN"))
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
+# ====================== HEALTH CHECK ======================
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, "✅ Alfred & Blaze are online!\n\nMention 'Alfred' for formal help, or just chat normally for Blaze.")
+
+@app.get("/")  # For Render health check
+async def health():
+    return {"status": "running", "bot": "Alfred & Blaze"}
+
+# ====================== MAIN HANDLER ======================
 @bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    user_text = message.text.strip()
-    
-    # Simple prompt for Alfred or Blaze
-    if any(word in user_text.lower() for word in ["alfred", "lord cramer", "butler", "formal"]):
-        system_prompt = "You are Alfred, a very formal, proper English butler. Always call the user 'Lord Cramer'. Be respectful and efficient."
-    else:
-        system_prompt = "You are Blaze, a cool, laid-back, slightly spicy and fun assistant. Use casual slang and keep it energetic."
-    
+def handle_all_messages(message):
     try:
-        response = llm.invoke([
-            HumanMessage(content=f"{system_prompt}\n\nUser: {user_text}")
-        ])
-        bot.reply_to(message, response.content)
-    except Exception as e:
-        bot.reply_to(message, "Sorry, I'm having a small issue right now. Please try again.")
+        text = message.text.strip()
+        user_name = message.from_user.first_name or "User"
 
+        if any(x in text.lower() for x in ["alfred", "butler", "lord cramer", "formal"]):
+            system = f"You are Alfred, a proper English butler. Address the user as 'Lord {user_name}' or 'Lord Cramer'. Be formal and helpful."
+        else:
+            system = f"You are Blaze, a cool, casual, slightly spicy assistant. Be fun and energetic with {user_name}."
+
+        response = llm.invoke([
+            HumanMessage(content=f"{system}\n\nUser: {text}")
+        ])
+
+        bot.reply_to(message, response.content)
+
+    except Exception as e:
+        print(f"Error: {e}")
+        bot.reply_to(message, "Sorry, I'm having a moment. Try again!")
+
+# ====================== START BOT ======================
 if __name__ == "__main__":
-    print("🤖 Telegram AI Butler Bot is now running...")
-    bot.polling(none_stop=True)
+    print("🚀 Starting Alfred & Blaze Telegram Bot...")
+    print("✅ Bot is ready. Send /start to test.")
+    
+    # Run with longer timeout to reduce conflicts
+    bot.infinity_polling(timeout=60, long_polling_timeout=60)
