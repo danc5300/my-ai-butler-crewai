@@ -5,7 +5,6 @@ from datetime import datetime
 from langchain_openrouter import ChatOpenRouter
 from langchain_community.tools import DuckDuckGoSearchRun
 
-# Initialize
 llm = ChatOpenRouter(
     model="deepseek/deepseek-chat",
     openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
@@ -35,46 +34,45 @@ memory = load_memory()
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     user_id = str(message.from_user.id)
-    text = message.text.strip().lower()
+    text = message.text.strip()
+    lower_text = text.lower()
     
     if user_id not in memory:
-        memory[user_id] = {"name": "Lord Cramer", "preferences": {}}
-    
+        memory[user_id] = {"name": "Lord Cramer"}
+
     # Personality
-    if any(word in text for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
-        personality = "You are Alfred, a very formal, proper English butler. Always address the user as 'Lord Cramer'. Be respectful, precise, and professional. Never guess numbers — say 'according to latest reports' and be honest about uncertainty."
-        greeting = "Very good, Lord Cramer."
+    if any(word in lower_text for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
+        personality = "You are Alfred, a formal and proper English butler. Address the user exclusively as 'Lord Cramer'. Be precise, professional, and honest about data limitations."
     else:
-        personality = "You are Blaze, a cool, energetic, slightly spicy assistant. Use casual language and keep it fun."
-        greeting = "Yo what's good!"
+        personality = "You are Blaze, a cool, energetic, and slightly spicy assistant. Use casual, fun language."
 
     current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
 
-    # Force search on relevant queries
-    if any(word in text for word in ["ship", "ships", "hormuz", "strait", "traffic", "how many", "latest", "current", "today", "update"]):
+    # Force fresh search on Hormuz queries
+    if "hormuz" in lower_text and ("ship" in lower_text or "traffic" in lower_text or "how many" in lower_text):
         try:
-            search_result = search.run("Strait of Hormuz ship traffic last 24 hours")
+            # More specific and recent-focused query
+            search_result = search.run("Strait of Hormuz number of ships last 24 hours site:reuters.com OR site:bbc.com OR site:marinetraffic.com OR site:lloydslist.com")
             full_prompt = f"""{personality}
 
 Current date and time: {current_time}
-Recent reliable search results: {search_result}
+Latest search results: {search_result}
 
-User asked: {message.text}
+User asked: {text}
 
-Give a direct, accurate answer. Use the most recent data. If numbers vary, pick the latest reliable figure and note the source/date. Do not hallucinate."""
+Answer directly with the most recent reliable figure. If data is unclear or conflicting, say so honestly. Do not guess or use old numbers."""
         except:
-            full_prompt = f"{personality}\n\nCurrent time: {current_time}\nUser: {message.text}\nI could not fetch live data. Be honest and polite."
+            full_prompt = f"{personality}\nCurrent time: {current_time}\nI couldn't fetch live data right now."
     else:
-        full_prompt = f"{personality}\n\nCurrent time: {current_time}\nUser: {message.text}"
+        full_prompt = f"{personality}\nCurrent time: {current_time}\nUser: {text}"
 
     try:
         response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
-        
-        memory[user_id]["last_message"] = message.text
+        memory[user_id]["last_message"] = text
         save_memory(memory)
-    except Exception as e:
-        bot.reply_to(message, f"{greeting} Small technical hiccup — try again shortly.")
+    except:
+        bot.reply_to(message, "Small technical issue — please try again shortly.")
 
-print("🤖 Alfred & Blaze are online...")
+print("🤖 Alfred & Blaze running...")
 bot.infinity_polling()
