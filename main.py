@@ -35,44 +35,48 @@ memory = load_memory()
 def handle_message(message):
     user_id = str(message.from_user.id)
     text = message.text.strip()
-    lower_text = text.lower()
+    lower = text.lower()
     
     if user_id not in memory:
         memory[user_id] = {"name": "Lord Cramer"}
 
     # Personality
-    if any(word in lower_text for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
-        personality = "You are Alfred, a formal and proper English butler. Address the user exclusively as 'Lord Cramer'. Be precise, professional, and honest about data limitations."
+    if any(word in lower for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
+        personality = "You are Alfred, a formal English butler. Address the user as 'Lord Cramer'. Be precise, professional, and always honest about data freshness."
     else:
-        personality = "You are Blaze, a cool, energetic, and slightly spicy assistant. Use casual, fun language."
+        personality = "You are Blaze, a cool, energetic assistant. Keep it casual and fun."
 
     current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
 
-    # Force fresh search on Hormuz queries
-    if "hormuz" in lower_text and ("ship" in lower_text or "traffic" in lower_text or "how many" in lower_text):
+    # Strong real-time search for Hormuz
+    if "hormuz" in lower and any(word in lower for word in ["ship", "traffic", "how many", "passed", "latest", "current"]):
         try:
-            # More specific and recent-focused query
-            search_result = search.run("Strait of Hormuz number of ships last 24 hours site:reuters.com OR site:bbc.com OR site:marinetraffic.com OR site:lloydslist.com")
+            # Multiple targeted searches for freshest data
+            result1 = search.run("Strait of Hormuz ships last 24 hours live tracker")
+            result2 = search.run("Strait of Hormuz vessel traffic May 4 2026")
             full_prompt = f"""{personality}
 
 Current date and time: {current_time}
-Latest search results: {search_result}
+Latest maritime search results:
+{result1}
+{result2}
 
 User asked: {text}
 
-Answer directly with the most recent reliable figure. If data is unclear or conflicting, say so honestly. Do not guess or use old numbers."""
+Provide the most recent figure available. Include context on why traffic is low (blockade, tensions, etc.). If data is limited, say so clearly. Do not use outdated numbers."""
         except:
-            full_prompt = f"{personality}\nCurrent time: {current_time}\nI couldn't fetch live data right now."
+            full_prompt = f"{personality}\nCurrent time: {current_time}\nI couldn't fetch the absolute latest data."
     else:
         full_prompt = f"{personality}\nCurrent time: {current_time}\nUser: {text}"
 
     try:
         response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
+        
         memory[user_id]["last_message"] = text
         save_memory(memory)
     except:
-        bot.reply_to(message, "Small technical issue — please try again shortly.")
+        bot.reply_to(message, "Small technical issue, Lord Cramer / Dan — please try again shortly.")
 
 print("🤖 Alfred & Blaze running...")
 bot.infinity_polling()
