@@ -1,5 +1,4 @@
-fastapi
-uvicorn
-langchain-openrouter
 pyTelegramBotAPI
+langchain-openrouter
+langchain-community
 requests
