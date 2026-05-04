@@ -1,7 +1,5 @@
 fastapi
 uvicorn
 langchain-openrouter
-telebot
-crewai
-crewai-tools
-pydantic
+pyTelegramBotAPI
+requests
