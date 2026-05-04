@@ -3,23 +3,19 @@ import json
 import telebot
 from datetime import datetime
 from langchain_openrouter import ChatOpenRouter
-from langchain_core.messages import HumanMessage
 from langchain_community.tools import DuckDuckGoSearchRun
 
-# ====================== CONFIG ======================
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
-
+# Initialize LLM
 llm = ChatOpenRouter(
     model="deepseek/deepseek-chat",
-    openrouter_api_key=OPENROUTER_KEY
+    openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
 search = DuckDuckGoSearchRun()
 
-bot = telebot.TeleBot(TELEGRAM_TOKEN)
+bot = telebot.TeleBot(os.getenv("TELEGRAM_BOT_TOKEN"))
 
-# ====================== MEMORY ======================
+# Simple persistent memory
 MEMORY_FILE = "user_memory.json"
 
 def load_memory():
@@ -33,61 +29,50 @@ def load_memory():
 
 def save_memory(memory):
     with open(MEMORY_FILE, "w") as f:
-        json.dump(memory, f, indent=2)
+        json.dump(memory, f)
 
 memory = load_memory()
 
-# ====================== COMMANDS ======================
-@bot.message_handler(commands=['start', 'help'])
-def welcome(message):
-    user_id = str(message.from_user.id)
-    if user_id not in memory:
-        memory[user_id] = {"name": message.from_user.first_name or "Cramer", "preferences": {}, "history": []}
-        save_memory(memory)
-    
-    bot.reply_to(message, f"✅ **Alfred & Blaze are online, Lord {memory[user_id]['name']}!**\n\n"
-                         "• Say 'Alfred' for formal butler mode\n"
-                         "• Just chat normally for Blaze")
-
-# ====================== MAIN HANDLER ======================
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     user_id = str(message.from_user.id)
     text = message.text.strip()
-    current_date = datetime.now().strftime("%B %d, %Y at %I:%M %p")
-
-    if user_id not in memory:
-        memory[user_id] = {"name": message.from_user.first_name or "Cramer", "preferences": {}, "history": []}
     
-    user_memory = memory[user_id]
-
-    # Decide mode
-    if any(word in text.lower() for word in ["alfred", "butler", "lord cramer", "formal", "sir"]):
-        personality = f"You are Alfred, a highly professional English butler. Current date: {current_date}. Address user as 'Lord {user_memory['name']}'."
+    # Load or init user memory
+    if user_id not in memory:
+        memory[user_id] = {"name": "Lord Cramer", "preferences": {}}
+    
+    # Determine personality
+    if any(word in text.lower() for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
+        personality = "You are Alfred, a very formal, proper English butler. Always address the user as 'Lord Cramer'. Speak elegantly and respectfully."
+        greeting = "Very good, Lord Cramer."
     else:
-        personality = f"You are Blaze, a cool, laid-back, fun assistant. Current date: {current_date}. Use casual energy."
+        personality = "You are Blaze, a cool, energetic, slightly spicy and fun assistant. Use casual slang and keep energy high."
+        greeting = "Yo what's good!"
+
+    current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+
+    # Real-time search trigger
+    search_query = None
+    if any(word in text.lower() for word in ["how many", "ships", "hormuz", "strait", "current", "today", "latest", "update", "traffic"]):
+        search_query = text
 
     try:
-        # Use search if question looks factual / current
-        if any(word in text.lower() for word in ["current", "today", "latest", "now", "how many", "what is", "news", "update", "hormuz", "weather", "stock"]):
-            search_result = search.run(text[:200])  # Limit query length
-            full_prompt = f"{personality}\n\nRecent search results: {search_result}\n\nUser question: {text}"
+        if search_query:
+            search_result = search.run(search_query)
+            full_prompt = f"{personality}\n\nCurrent date and time: {current_time}\nRecent search results: {search_result}\n\nUser asked: {text}\nGive a direct, accurate answer."
         else:
-            full_prompt = f"{personality}\n\nUser: {text}"
+            full_prompt = f"{personality}\n\nCurrent date and time: {current_time}\nUser asked: {text}\nAnswer helpfully and in character."
 
-        response = llm.invoke([HumanMessage(content=full_prompt)])
-        
+        response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
         
-        # Save conversation to memory
-        user_memory["history"].append({"date": current_date, "user": text, "assistant": response.content})
-        if len(user_memory["history"]) > 50:
-            user_memory["history"] = user_memory["history"][-50:]
+        # Save memory
+        memory[user_id]["last_message"] = text
         save_memory(memory)
-
+        
     except Exception as e:
-        bot.reply_to(message, "Sorry, I'm having a small technical issue right now. Please try again.")
+        bot.reply_to(message, f"{greeting} I'm having a small technical issue right now. Please try again.")
 
-if __name__ == "__main__":
-    print("✅ Alfred & Blaze with Memory + Real-time Search Started")
-    bot.infinity_polling()
+print("🤖 Alfred & Blaze Telegram Bot is running...")
+bot.infinity_polling()
