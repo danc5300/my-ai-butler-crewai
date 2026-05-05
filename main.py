@@ -34,52 +34,12 @@ memory = load_memory()
 LIMITS = {"free": 15, "essential": 100, "premium": 500}
 LAST_BRIEF_DATE = {}
 
-MORNING_TEMPLATES = [
-    "Good morning {name}! Let's make today awesome.",
-    "Rise and shine, {name}! Here's your morning boost.",
-    "Yo {name}! New day, fresh energy — let's go!",
-    "Morning {name}! Time to crush it.",
-    "Hey {name}, hope you're ready — here's the brief!"
-]
-
-def send_morning_brief(user_id):
-    if user_id not in memory:
-        return
-    user = memory[user_id]
-    name = user.get("name", "friend")
-
-    try:
-        weather = search.run("Kalamazoo Michigan current weather and forecast today")
-        hormuz = search.run("Strait of Hormuz ship traffic last 24 hours latest")
-        
-        template = random.choice(MORNING_TEMPLATES)
-        prompt = f"""You are Blaze, energetic, casual and fun.
-Current exact time: {datetime.now().strftime("%B %d, %Y at %I:%M %p EST")}
-
-{template.format(name=name)}
-
-Weather in Kalamazoo: {weather}
-Strait of Hormuz last 24h: {hormuz}
-
-Create a fun morning briefing. Always include:
-- Short accurate Kalamazoo weather
-- Latest ship count through Strait of Hormuz + short context
-- One inspirational Bible verse
-
-NEVER invent personal schedules or events."""
-
-        response = llm.invoke(prompt)
-        bot.send_message(user_id, response.content)
-    except:
-        bot.send_message(user_id, f"Morning {name}! Hope you have a great day!")
-
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     user_id = str(message.from_user.id)
     text = message.text.strip()
     lower = text.lower()
     today = str(date.today())
-    now = datetime.now()
 
     # New user welcome (only once)
     if user_id not in memory:
@@ -93,59 +53,36 @@ def handle_message(message):
     daily_count = user["usage"].get(today, 0)
     limit = LIMITS.get(tier, 15)
 
-    # Commands
-    if text == "/help":
-        bot.reply_to(message, "Commands:\n/upgrade - Upgrade plan\n/cancel - Cancel\n/help - This menu")
-        return
-    if text == "/upgrade":
-        bot.reply_to(message, "🔼 Upgrade here:\n• Essential ($29/mo) → [Polar Link]\n• Premium ($49/mo) → [Polar Link]")
-        return
-    if text.startswith("/cancel"):
-        bot.reply_to(message, "⚠️ Are you sure? Reply **YES** to confirm.")
-        return
-    if text == "YES" and "cancel" in user.get("last_message", ""):
-        bot.reply_to(message, "Subscription cancelled. You can rejoin anytime!")
-        return
-
-    # Auto morning brief after 8 AM
-    if now.hour >= 8 and LAST_BRIEF_DATE.get(user_id) != today:
-        send_morning_brief(user_id)
-        LAST_BRIEF_DATE[user_id] = today
-
-    # Manual brief request
-    if any(phrase in lower for phrase in ["morning brief", "daily brief", "updated brief", "brief please", "give me a brief"]):
-        bot.reply_to(message, "Got it! Pulling together your brief...")
-        send_morning_brief(user_id)
-        return
-
-    # Immediate acknowledgement for EVERY request
-    bot.reply_to(message, "Got it! Working on that right now...")
+    # Immediate acknowledgement for EVERY message
+    if any(phrase in lower for phrase in ["brief", "analyze", "summarize", "video", "update"]):
+        bot.reply_to(message, "Got it! Working on that right now...")
+    else:
+        bot.reply_to(message, "Got it!")
 
     # Usage check
     if daily_count >= limit:
         bot.reply_to(message, f"You've reached your daily limit ({limit} messages). Type /upgrade to get more!")
         return
 
-    # Personality routing
+    # Personality
     if any(word in lower for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
         personality = "Alfred"
     else:
         personality = "Blaze"
 
-    current_time = now.strftime("%B %d, %Y at %I:%M %p EST")
+    current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p EST")
 
     try:
-        # Special handling for video links
+        # Special handling for video analysis
         if "youtube.com" in lower or "analyze" in lower or "summarize" in lower or "video" in lower:
-            full_prompt = f"You are {personality}. Current time: {current_time}. Summarize the key points of this video or request: {text}. Be clear and factual."
+            full_prompt = f"You are {personality}. Current time: {current_time}. Summarize the key points of this video: {text}. Be clear, factual, and concise."
         else:
-            full_prompt = f"You are {personality}. Current time: {current_time}. User: {text}. NEVER invent personal schedules or events."
+            full_prompt = f"You are {personality}. Current time: {current_time}. User: {text}. Never invent schedules or events."
 
         response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
 
         user["usage"][today] = daily_count + 1
-        user["last_message"] = text
         save_memory(memory)
     except:
         bot.reply_to(message, "Small glitch — try again shortly.")
