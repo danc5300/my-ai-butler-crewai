@@ -1,6 +1,7 @@
 import os
 import json
 import telebot
+import random
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from langchain_openrouter import ChatOpenRouter
@@ -32,6 +33,7 @@ def save_memory(memory):
 memory = load_memory()
 
 LIMITS = {"free": 15, "essential": 100, "premium": 500}
+LAST_BRIEF_DATE = {}
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -39,7 +41,7 @@ def handle_message(message):
     text = message.text.strip()
     lower = text.lower()
     today = str(date.today())
-    now = datetime.now(ZoneInfo("America/New_York"))  # Force EDT/EST
+    now = datetime.now(ZoneInfo("America/New_York"))
 
     # New user welcome (only once)
     if user_id not in memory:
@@ -53,15 +55,18 @@ def handle_message(message):
     daily_count = user["usage"].get(today, 0)
     limit = LIMITS.get(tier, 15)
 
-    # Immediate acknowledgement
-    bot.reply_to(message, "Got it! Working on that right now...")
+    # Immediate fun acknowledgement
+    if "blaze" in lower:
+        bot.reply_to(message, "Yo what's good, Dan?! 🔥 Working on that right now...")
+    else:
+        bot.reply_to(message, "Got it! Working on that right now...")
 
     # Usage check
     if daily_count >= limit:
         bot.reply_to(message, f"You've reached your daily limit ({limit} messages). Type /upgrade to get more!")
         return
 
-    # Personality
+    # Personality (stronger for Blaze)
     if any(word in lower for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
         personality = "Alfred"
     else:
@@ -73,13 +78,13 @@ def handle_message(message):
         # Force search for current info
         search_result = search.run(text[:300])
         full_prompt = f"""You are {personality}. 
-Current exact time in Kalamazoo, Michigan: {current_time}
+Current exact time in Kalamazoo: {current_time}
 
 Search result: {search_result}
 
 User request: {text}
 
-Answer using the search data. Be direct, accurate, and concise. Do not guess or invent information."""
+Answer with energy and personality. Be direct and use real data from the search."""
 
         response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
