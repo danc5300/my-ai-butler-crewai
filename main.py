@@ -35,10 +35,10 @@ LIMITS = {"free": 15, "essential": 100, "premium": 500}
 LAST_BRIEF_DATE = {}
 
 MORNING_TEMPLATES = [
-    "Good morning {name}! Let's crush today.",
+    "Good morning {name}! Let's make today awesome.",
     "Rise and shine, {name}! Here's your morning boost.",
-    "Yo {name}! New day, fresh energy.",
-    "Morning {name}! Time to own the day.",
+    "Yo {name}! New day, fresh energy — let's go!",
+    "Morning {name}! Time to crush it.",
     "Hey {name}, hope you're ready — here's the brief!"
 ]
 
@@ -53,7 +53,7 @@ def send_morning_brief(user_id):
         hormuz = search.run("Strait of Hormuz ship traffic last 24 hours latest")
         
         template = random.choice(MORNING_TEMPLATES)
-        prompt = f"""You are Blaze, energetic and casual.
+        prompt = f"""You are Blaze, energetic, casual and fun.
 Current exact time: {datetime.now().strftime("%B %d, %Y at %I:%M %p EST")}
 
 {template.format(name=name)}
@@ -63,7 +63,7 @@ Strait of Hormuz last 24h: {hormuz}
 
 Create a fun morning briefing. Always include:
 - Short accurate Kalamazoo weather
-- Latest ship count through Strait of Hormuz + short context
+- Latest ship count through Strait of Hormuz + short context why low
 - One inspirational Bible verse
 
 NEVER invent personal schedules, appointments, or events. Stick to real data only."""
@@ -101,7 +101,7 @@ def handle_message(message):
         bot.reply_to(message, "🔼 Upgrade here:\n• Essential ($29/mo) → [Polar Link]\n• Premium ($49/mo) → [Polar Link]")
         return
     if text.startswith("/cancel"):
-        bot.reply_to(message, "⚠️ Are you sure? Reply **YES** to confirm cancellation.")
+        bot.reply_to(message, "⚠️ Are you sure? Reply **YES** to confirm.")
         return
     if text == "YES" and "cancel" in user.get("last_message", ""):
         bot.reply_to(message, "Subscription cancelled. You can rejoin anytime!")
@@ -112,12 +112,17 @@ def handle_message(message):
         send_morning_brief(user_id)
         LAST_BRIEF_DATE[user_id] = today
 
-    # Usage limit check
+    # Manual brief request (Option A)
+    if any(phrase in lower for phrase in ["morning brief", "daily brief", "updated brief", "brief please"]):
+        send_morning_brief(user_id)
+        return
+
+    # Usage check
     if daily_count >= limit:
         bot.reply_to(message, f"You've reached your daily limit ({limit} messages). Type /upgrade to get more!")
         return
 
-    # Strict personality routing
+    # Personality routing
     if any(word in lower for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
         personality = "Alfred"
     else:
@@ -126,7 +131,7 @@ def handle_message(message):
     current_time = now.strftime("%B %d, %Y at %I:%M %p EST")
 
     try:
-        response = llm.invoke(f"You are {personality}. Current time: {current_time}. User: {text}. Never invent personal schedule items.")
+        response = llm.invoke(f"You are {personality}. Current time: {current_time}. User: {text}. NEVER invent personal schedules or events.")
         bot.reply_to(message, response.content)
 
         user["usage"][today] = daily_count + 1
