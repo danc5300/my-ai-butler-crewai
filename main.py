@@ -32,7 +32,6 @@ def save_memory(memory):
 memory = load_memory()
 
 LIMITS = {"free": 15, "essential": 100, "premium": 500}
-LAST_BRIEF_DATE = {}
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -40,7 +39,7 @@ def handle_message(message):
     text = message.text.strip()
     lower = text.lower()
     today = str(date.today())
-    now = datetime.now(ZoneInfo("America/New_York"))  # Force Eastern Time
+    now = datetime.now(ZoneInfo("America/New_York"))  # Force EDT/EST
 
     # New user welcome (only once)
     if user_id not in memory:
@@ -72,11 +71,15 @@ def handle_message(message):
 
     try:
         # Force search for current info
-        if any(word in lower for word in ["time", "weather", "brief", "update", "headlines", "oil", "price", "hormuz"]):
-            search_result = search.run(text[:250])
-            full_prompt = f"You are {personality}. Current exact time in Kalamazoo: {current_time}. Search result: {search_result}. User: {text}. Answer accurately using the search data. Do not guess."
-        else:
-            full_prompt = f"You are {personality}. Current exact time in Kalamazoo: {current_time}. User: {text}. Be factual."
+        search_result = search.run(text[:300])
+        full_prompt = f"""You are {personality}. 
+Current exact time in Kalamazoo, Michigan: {current_time}
+
+Search result: {search_result}
+
+User request: {text}
+
+Answer using the search data. Be direct, accurate, and concise. Do not guess or invent information."""
 
         response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
