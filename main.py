@@ -118,13 +118,13 @@ def handle_message(message):
         send_morning_brief(user_id)
         return
 
+    # Immediate acknowledgement for everything else
+    bot.reply_to(message, "Got it! Working on that...")
+
     # Usage check
     if daily_count >= limit:
         bot.reply_to(message, f"You've reached your daily limit ({limit} messages). Type /upgrade to get more!")
         return
-
-    # Immediate acknowledgement for normal messages
-    bot.reply_to(message, "Got it! Working on that...")
 
     # Personality routing
     if any(word in lower for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
@@ -135,7 +135,13 @@ def handle_message(message):
     current_time = now.strftime("%B %d, %Y at %I:%M %p EST")
 
     try:
-        response = llm.invoke(f"You are {personality}. Current time: {current_time}. User: {text}. NEVER invent personal schedules or events.")
+        # Better prompt for video/news analysis
+        if "youtube.com" in lower or "analyze" in lower or "video" in lower:
+            full_prompt = f"You are {personality}. Current time: {current_time}. User asked to analyze: {text}. Summarize key points clearly and stay factual."
+        else:
+            full_prompt = f"You are {personality}. Current time: {current_time}. User: {text}. NEVER invent personal schedules or events."
+
+        response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
 
         user["usage"][today] = daily_count + 1
