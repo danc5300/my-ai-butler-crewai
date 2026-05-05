@@ -1,7 +1,6 @@
 import os
 import json
 import telebot
-import random
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from langchain_openrouter import ChatOpenRouter
@@ -41,6 +40,7 @@ def handle_message(message):
     text = message.text.strip()
     lower = text.lower()
     today = str(date.today())
+    now = datetime.now(ZoneInfo("America/New_York"))  # Force Eastern Time
 
     # New user welcome (only once)
     if user_id not in memory:
@@ -68,12 +68,15 @@ def handle_message(message):
     else:
         personality = "Blaze"
 
-    # Force Eastern Time for Kalamazoo
-    eastern = ZoneInfo("America/New_York")
-    current_time = datetime.now(eastern).strftime("%B %d, %Y at %I:%M %p EST")
+    current_time = now.strftime("%B %d, %Y at %I:%M %p EDT")
 
     try:
-        full_prompt = f"You are {personality}. Current exact time in Kalamazoo, Michigan: {current_time}. User: {text}. Be accurate and factual."
+        # Force search for current info
+        if any(word in lower for word in ["time", "weather", "brief", "update", "headlines", "oil", "price", "hormuz"]):
+            search_result = search.run(text[:250])
+            full_prompt = f"You are {personality}. Current exact time in Kalamazoo: {current_time}. Search result: {search_result}. User: {text}. Answer accurately using the search data. Do not guess."
+        else:
+            full_prompt = f"You are {personality}. Current exact time in Kalamazoo: {current_time}. User: {text}. Be factual."
 
         response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
