@@ -71,17 +71,18 @@ def handle_message(message):
     current_time = now.strftime("%B %d, %Y at %I:%M %p EST")
 
     try:
-        # Strong prompt that encourages using tools for current info
+        # Stronger prompt for accuracy
         full_prompt = f"""You are {personality}. 
 Current exact time: {current_time}
+Location context: Kalamazoo, Michigan
 
 User request: {text}
 
 Rules:
-- Use the search tool for current events, weather, news, or numbers.
-- Be accurate and honest.
-- If you can't find real data, say so clearly.
-- Never invent personal schedules or events."""
+- Use search tool for weather, news, oil prices, ship traffic, or current events.
+- Be accurate and honest. If data is limited, say so.
+- Never invent schedules, appointments, or personal events.
+- Stay in character."""
 
         response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
