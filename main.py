@@ -35,14 +35,14 @@ LIMITS = {"free": 15, "essential": 100, "premium": 500}
 LAST_BRIEF_DATE = {}
 
 MORNING_TEMPLATES = [
-    "Good morning {name}! Let's make today awesome.",
+    "Good morning {name}! Let's crush today.",
     "Rise and shine, {name}! Here's your morning boost.",
-    "Yo {name}! New day, fresh energy — let's go!",
-    "Morning {name}! Time to crush it.",
+    "Yo {name}! New day, fresh energy.",
+    "Morning {name}! Time to own the day.",
     "Hey {name}, hope you're ready — here's the brief!"
 ]
 
-def send_morning_brief(user_id, personality="Blaze"):
+def send_morning_brief(user_id):
     if user_id not in memory:
         return
     user = memory[user_id]
@@ -53,20 +53,20 @@ def send_morning_brief(user_id, personality="Blaze"):
         hormuz = search.run("Strait of Hormuz ship traffic last 24 hours latest")
         
         template = random.choice(MORNING_TEMPLATES)
-        prompt = f"""You are {personality}, {'a formal English butler who addresses the user as Lord Cramer' if personality == 'Alfred' else 'energetic, casual and fun'}.
+        prompt = f"""You are Blaze, energetic and casual.
 Current exact time: {datetime.now().strftime("%B %d, %Y at %I:%M %p EST")}
 
 {template.format(name=name)}
 
-Weather in Kalamazoo right now: {weather}
-Strait of Hormuz last 24 hours: {hormuz}
+Weather in Kalamazoo: {weather}
+Strait of Hormuz last 24h: {hormuz}
 
-Create a positive morning briefing. Always include:
+Create a fun morning briefing. Always include:
 - Short accurate Kalamazoo weather
-- Latest ship count through Strait of Hormuz + short context why it's low
+- Latest ship count through Strait of Hormuz + short context
 - One inspirational Bible verse
 
-NEVER invent appointments, schedules, or events. Stick to real data only."""
+NEVER invent personal schedules, appointments, or events. Stick to real data only."""
 
         response = llm.invoke(prompt)
         bot.send_message(user_id, response.content)
@@ -81,10 +81,11 @@ def handle_message(message):
     today = str(date.today())
     now = datetime.now()
 
-    # New user welcome
+    # New user welcome (only once)
     if user_id not in memory:
         memory[user_id] = {"name": "friend", "tier": "free", "usage": {}}
-        bot.reply_to(message, "Welcome to My AI Butler! 🎉 You can talk to Alfred (formal) or Blaze (fun). Type /help for commands.")
+        bot.reply_to(message, "Welcome to My AI Butler! 🎉 Talk to Alfred (formal) or Blaze (fun). Type /help for commands.")
+        save_memory(memory)
         return
 
     user = memory[user_id]
@@ -94,13 +95,13 @@ def handle_message(message):
 
     # Commands
     if text == "/help":
-        bot.reply_to(message, "Commands:\n/upgrade - Upgrade your plan\n/cancel - Cancel subscription\n/help - This menu")
+        bot.reply_to(message, "Commands:\n/upgrade - Upgrade plan\n/cancel - Cancel\n/help - This menu")
         return
     if text == "/upgrade":
         bot.reply_to(message, "🔼 Upgrade here:\n• Essential ($29/mo) → [Polar Link]\n• Premium ($49/mo) → [Polar Link]")
         return
     if text.startswith("/cancel"):
-        bot.reply_to(message, "⚠️ Are you sure you want to cancel? Reply **YES** to confirm.")
+        bot.reply_to(message, "⚠️ Are you sure? Reply **YES** to confirm cancellation.")
         return
     if text == "YES" and "cancel" in user.get("last_message", ""):
         bot.reply_to(message, "Subscription cancelled. You can rejoin anytime!")
@@ -111,30 +112,28 @@ def handle_message(message):
         send_morning_brief(user_id)
         LAST_BRIEF_DATE[user_id] = today
 
-    # Usage check
+    # Usage limit check
     if daily_count >= limit:
-        bot.reply_to(message, f"You've reached your daily limit ({limit} messages). Type /upgrade to increase it!")
+        bot.reply_to(message, f"You've reached your daily limit ({limit} messages). Type /upgrade to get more!")
         return
 
-    # Personality routing (strict)
+    # Strict personality routing
     if any(word in lower for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
         personality = "Alfred"
-        greeting = "Very good, Lord Cramer."
     else:
         personality = "Blaze"
-        greeting = "Yo what's good!"
 
     current_time = now.strftime("%B %d, %Y at %I:%M %p EST")
 
     try:
-        response = llm.invoke(f"You are {personality}. Current time: {current_time}. User: {text}")
+        response = llm.invoke(f"You are {personality}. Current time: {current_time}. User: {text}. Never invent personal schedule items.")
         bot.reply_to(message, response.content)
 
         user["usage"][today] = daily_count + 1
         user["last_message"] = text
         save_memory(memory)
     except:
-        bot.reply_to(message, f"{greeting} Small glitch — try again shortly.")
+        bot.reply_to(message, "Small glitch — try again shortly.")
 
 print("🤖 Alfred & Blaze running...")
 bot.infinity_polling()
