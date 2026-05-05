@@ -63,10 +63,10 @@ Strait of Hormuz last 24h: {hormuz}
 
 Create a fun morning briefing. Always include:
 - Short accurate Kalamazoo weather
-- Latest ship count through Strait of Hormuz + short context why low
+- Latest ship count through Strait of Hormuz + short context
 - One inspirational Bible verse
 
-NEVER invent personal schedules, appointments, or events. Stick to real data only."""
+NEVER invent personal schedules or events."""
 
         response = llm.invoke(prompt)
         bot.send_message(user_id, response.content)
@@ -107,13 +107,14 @@ def handle_message(message):
         bot.reply_to(message, "Subscription cancelled. You can rejoin anytime!")
         return
 
-    # Auto morning brief after 8 AM (once per day)
+    # Auto morning brief after 8 AM
     if now.hour >= 8 and LAST_BRIEF_DATE.get(user_id) != today:
         send_morning_brief(user_id)
         LAST_BRIEF_DATE[user_id] = today
 
-    # Manual brief request (Option A)
-    if any(phrase in lower for phrase in ["morning brief", "daily brief", "updated brief", "brief please"]):
+    # Manual brief request
+    if any(phrase in lower for phrase in ["morning brief", "daily brief", "updated brief", "brief please", "give me a brief"]):
+        bot.reply_to(message, "Got it! Pulling together your brief...")
         send_morning_brief(user_id)
         return
 
@@ -121,6 +122,9 @@ def handle_message(message):
     if daily_count >= limit:
         bot.reply_to(message, f"You've reached your daily limit ({limit} messages). Type /upgrade to get more!")
         return
+
+    # Immediate acknowledgement for normal messages
+    bot.reply_to(message, "Got it! Working on that...")
 
     # Personality routing
     if any(word in lower for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
