@@ -37,36 +37,33 @@ memory = load_memory()
 # Usage Limits
 LIMITS = {"free": 15, "essential": 100, "premium": 500}
 
-def send_morning_brief(user_id):
-    """Send daily 8 AM EST morning update"""
+def send_morning_brief():
+    """Automatic 8 AM EST morning update"""
+    user_id = "7663595375"   # Your Telegram ID
     if user_id not in memory:
         return
     
     user = memory[user_id]
     name = user.get("name", "Dan")
-    
+
     try:
-        # Gather data
         weather = search.run("Kalamazoo Michigan weather today")
         hormuz = search.run("Strait of Hormuz ship traffic last 24 hours")
-        local = search.run("Kalamazoo Michigan news and events today")
         
         prompt = f"""You are Blaze, a cool, energetic, slightly spicy assistant.
-Current time: {datetime.now().strftime("%B %d, %Y at %I:%M %p EST")}
+Current date and time: {datetime.now().strftime("%B %d, %Y at %I:%M %p EST")}
 
 User: {name}
 Family: Wife Tara, three boys, dog Atlas (half German Shepherd, half Great Pyrenees)
 
-Weather: {weather}
-Hormuz ships last 24h: {hormuz}
-Local Kalamazoo info: {local}
+Weather in Kalamazoo: {weather}
+Strait of Hormuz last 24 hours: {hormuz}
 
-Create a fun, positive morning briefing. Include:
+Create a fun, positive morning briefing. Always include:
 - Short weather report for Kalamazoo
-- Latest Strait of Hormuz ship count + brief context
-- 1-2 useful local notes for Kalamazoo today
+- Latest ship count through Strait of Hormuz + short context why it's low
 - One inspirational Bible verse
-Keep energy high and casual."""
+Keep the energy high and casual. Make it feel personal."""
 
         response = llm.invoke(prompt)
         bot.send_message(user_id, response.content)
@@ -74,17 +71,16 @@ Keep energy high and casual."""
     except:
         bot.send_message(user_id, f"Yo {name}! Quick morning check-in — everything's good, have an awesome day!")
 
-# Schedule daily briefs at 8:00 AM EST
+# Schedule 8 AM EST daily
 def run_scheduler():
-    schedule.every().day.at("08:00").do(lambda: send_morning_brief("7663595375"))  # Your Telegram user ID
+    schedule.every().day.at("08:00").do(send_morning_brief)
     while True:
         schedule.run_pending()
         time.sleep(60)
 
-# Start scheduler in background thread
 threading.Thread(target=run_scheduler, daemon=True).start()
 
-# Normal message handler (same as before)
+# Normal message handler
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     user_id = str(message.from_user.id)
@@ -111,7 +107,7 @@ def handle_message(message):
         bot.reply_to(message, f"Sorry {user['name']}, you've hit your daily limit ({limit} messages). Come back tomorrow or upgrade!")
         return
 
-    # Personality + response logic (same as previous good version)
+    # Personality
     if any(word in lower for word in ["alfred", "lord cramer", "butler", "formal", "sir"]):
         personality = "You are Alfred, a formal English butler. Address user as 'Lord Cramer'."
         greeting = "Very good, Lord Cramer."
@@ -122,13 +118,7 @@ def handle_message(message):
     current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
 
     try:
-        if "hormuz" in lower:
-            search_result = search.run("Strait of Hormuz ship traffic last 24 hours")
-            full_prompt = f"{personality}\nCurrent time: {current_time}\nSearch: {search_result}\nUser: {text}\nAnswer accurately with context."
-        else:
-            full_prompt = f"{personality}\nCurrent time: {current_time}\nUser: {text}"
-
-        response = llm.invoke(full_prompt)
+        response = llm.invoke(f"{personality}\nCurrent time: {current_time}\nUser: {text}")
         bot.reply_to(message, response.content)
 
         user["usage"][today] = daily_count + 1
@@ -136,5 +126,5 @@ def handle_message(message):
     except:
         bot.reply_to(message, f"{greeting} Small glitch — try again!")
 
-print("🤖 Alfred & Blaze running with daily 8 AM briefings...")
+print("🤖 Alfred & Blaze running with 8 AM morning briefs...")
 bot.infinity_polling()
