@@ -3,6 +3,7 @@ import json
 import telebot
 import random
 from datetime import datetime, date
+from zoneinfo import ZoneInfo
 from langchain_openrouter import ChatOpenRouter
 from langchain_community.tools import DuckDuckGoSearchRun
 
@@ -40,7 +41,6 @@ def handle_message(message):
     text = message.text.strip()
     lower = text.lower()
     today = str(date.today())
-    now = datetime.now()
 
     # New user welcome (only once)
     if user_id not in memory:
@@ -68,15 +68,12 @@ def handle_message(message):
     else:
         personality = "Blaze"
 
-    current_time = now.strftime("%B %d, %Y at %I:%M %p EST")
+    # Force Eastern Time for Kalamazoo
+    eastern = ZoneInfo("America/New_York")
+    current_time = datetime.now(eastern).strftime("%B %d, %Y at %I:%M %p EST")
 
     try:
-        # Force search for current info
-        if any(word in lower for word in ["time", "weather", "brief", "update", "headlines", "oil", "hormuz"]):
-            search_result = search.run(text[:200])
-            full_prompt = f"You are {personality}. Current exact time: {current_time}. Search result: {search_result}. User: {text}. Answer accurately using the search data."
-        else:
-            full_prompt = f"You are {personality}. Current exact time: {current_time}. User: {text}. Be factual."
+        full_prompt = f"You are {personality}. Current exact time in Kalamazoo, Michigan: {current_time}. User: {text}. Be accurate and factual."
 
         response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
