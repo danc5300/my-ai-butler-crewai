@@ -118,8 +118,8 @@ def handle_message(message):
         send_morning_brief(user_id)
         return
 
-    # Immediate acknowledgement for everything else
-    bot.reply_to(message, "Got it! Working on that...")
+    # Immediate acknowledgement for EVERY request
+    bot.reply_to(message, "Got it! Working on that right now...")
 
     # Usage check
     if daily_count >= limit:
@@ -135,9 +135,9 @@ def handle_message(message):
     current_time = now.strftime("%B %d, %Y at %I:%M %p EST")
 
     try:
-        # Better prompt for video/news analysis
-        if "youtube.com" in lower or "analyze" in lower or "video" in lower:
-            full_prompt = f"You are {personality}. Current time: {current_time}. User asked to analyze: {text}. Summarize key points clearly and stay factual."
+        # Special handling for video links
+        if "youtube.com" in lower or "analyze" in lower or "summarize" in lower or "video" in lower:
+            full_prompt = f"You are {personality}. Current time: {current_time}. Summarize the key points of this video or request: {text}. Be clear and factual."
         else:
             full_prompt = f"You are {personality}. Current time: {current_time}. User: {text}. NEVER invent personal schedules or events."
 
