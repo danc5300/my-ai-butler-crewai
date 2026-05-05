@@ -40,6 +40,7 @@ def handle_message(message):
     text = message.text.strip()
     lower = text.lower()
     today = str(date.today())
+    now = datetime.now()
 
     # New user welcome (only once)
     if user_id not in memory:
@@ -53,11 +54,8 @@ def handle_message(message):
     daily_count = user["usage"].get(today, 0)
     limit = LIMITS.get(tier, 15)
 
-    # Immediate acknowledgement for EVERY message
-    if any(phrase in lower for phrase in ["brief", "analyze", "summarize", "video", "update"]):
-        bot.reply_to(message, "Got it! Working on that right now...")
-    else:
-        bot.reply_to(message, "Got it!")
+    # Immediate acknowledgement
+    bot.reply_to(message, "Got it! Working on that right now...")
 
     # Usage check
     if daily_count >= limit:
@@ -70,14 +68,17 @@ def handle_message(message):
     else:
         personality = "Blaze"
 
-    current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p EST")
+    current_time = now.strftime("%B %d, %Y at %I:%M %p EST")
 
     try:
-        # Special handling for video analysis
-        if "youtube.com" in lower or "analyze" in lower or "summarize" in lower or "video" in lower:
-            full_prompt = f"You are {personality}. Current time: {current_time}. Summarize the key points of this video: {text}. Be clear, factual, and concise."
-        else:
-            full_prompt = f"You are {personality}. Current time: {current_time}. User: {text}. Never invent schedules or events."
+        # Stronger prompt for accuracy
+        full_prompt = f"""You are {personality}. 
+Current exact time: {current_time}
+You MUST use real data only. Never guess or invent weather, time, stock market status, schedules, or events.
+
+User request: {text}
+
+Answer factually and concisely. If you don't have accurate current data, say so honestly."""
 
         response = llm.invoke(full_prompt)
         bot.reply_to(message, response.content)
